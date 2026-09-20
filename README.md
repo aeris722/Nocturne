@@ -1,6 +1,6 @@
 # Nocturne
 
-Nocturne is a private AMOLED daily routine tracker for focus, hydration, workouts, journaling, meditation, and monthly progress.
+Nocturne is for aspirants!
 
 ## Website
 
