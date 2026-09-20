@@ -3,6 +3,8 @@ const taskIds=new Set(['wake','workout','journal','meditate','weekend1','weekend
 function validate(change){
  if(!change||typeof change.key!=='string')return false;
  const {key,value}=change;
+ if(/^exam\/[01]$/.test(key))return value&&typeof value.name==='string'&&value.name.length<=60&&typeof value.date==='string'&&(value.date===''||validDate(value.date))&&typeof value.improvements==='string'&&value.improvements.length<=3000;
+ if(/^review\//.test(key))return validDate(key.slice(7))&&value&&typeof value.completed==='boolean'&&Array.isArray(value.items)&&value.items.length<=20&&value.items.every(item=>item&&typeof item.id==='string'&&/^[a-zA-Z0-9-]{1,64}$/.test(item.id)&&typeof item.mistake==='string'&&item.mistake.length<=500&&typeof item.solution==='string'&&item.solution.length<=1000)&&value.checks&&typeof value.checks==='object'&&!Array.isArray(value.checks)&&Object.entries(value.checks).length<=20&&Object.entries(value.checks).every(([id,checked])=>/^[a-zA-Z0-9-]{1,64}$/.test(id)&&typeof checked==='boolean');
  if(key==='quote')return value&&typeof value.text==='string'&&value.text.length>0&&value.text.length<=240&&typeof value.author==='string'&&value.author.length<=70;
  const match=/^(\d{4}-\d{2}-\d{2})\/(day|water|task\/([a-z0-9]+))$/.exec(key);
  if(!match||isNaN(Date.parse(match[1]))||new Date(match[1]).toISOString().slice(0,10)!==match[1])return false;
@@ -12,6 +14,7 @@ function validate(change){
  if(value===null)return true;
  return value&&['done','missed'].includes(value.status)&&Number.isFinite(value.rating)&&value.rating>=0&&value.rating<=100&&(!value.subjects||(Array.isArray(value.subjects)&&value.subjects.length===3&&value.subjects.every(n=>Number.isFinite(n)&&n>=0&&n<=100)));
 }
+function validDate(value){return /^\d{4}-\d{2}-\d{2}$/.test(value)&&!isNaN(Date.parse(value))&&new Date(value).toISOString().slice(0,10)===value}
 function database(env){if(!env.DB)throw new Error('Database unavailable');return env.DB}
 export async function handleAPI(request,env){
  const url=new URL(request.url);if(url.pathname!=='/api/state')return json({error:'Not found'},404);
