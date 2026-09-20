@@ -1,6 +1,6 @@
 # Nocturne
 
-Nocturne is for aspirants!
+Nocturne is for aspirants preparing for competitive exams!
 
 ## Website
 
