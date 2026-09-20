@@ -4,7 +4,7 @@ Nocturne is a private AMOLED daily routine tracker for focus, hydration, workout
 
 ## Website
 
-[Open Nocturne](https://nocturne-daily-ritual-aasii.ajitlalmishra.chatgpt.site)
+[Open Nocturne](https://aeris722.github.io/Nocturne/)
 
 ## Version
 
