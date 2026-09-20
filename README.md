@@ -9,15 +9,3 @@ Nocturne is a private AMOLED daily routine tracker for focus, hydration, workout
 ## Version
 
 `v0.1`
-
-## Development
-
-```bash
-npm run dev
-```
-
-## Build
-
-```bash
-npm run build
-```

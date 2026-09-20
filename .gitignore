@@ -1,5 +1,5 @@
 node_modules/
-.sites-runtime/
 .local/
+.sites-runtime/
 dist/server/
 dist/.openai/

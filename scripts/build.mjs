@@ -1,6 +1,0 @@
-import {mkdir,readFile,writeFile,cp} from 'node:fs/promises';
-const files={'/':['index.html','text/html; charset=utf-8'],'/style.css':['style.css','text/css; charset=utf-8'],'/app.js':['app.js','text/javascript; charset=utf-8'],'/icon.svg':['icon.svg','image/svg+xml']};
-const assets={};for(const [route,[file,type]] of Object.entries(files))assets[route]={body:await readFile('dist/'+file,'utf8'),type};
-await mkdir('dist/server',{recursive:true});await mkdir('dist/.openai',{recursive:true});
-await writeFile('dist/server/index.js',`import { handleAPI } from './api.js';\nconst assets=${JSON.stringify(assets)};\nexport default {async fetch(request,env){const url=new URL(request.url);if(url.pathname.startsWith('/api/'))return handleAPI(request,env);const asset=assets[url.pathname];if(!asset)return new Response('Not found',{status:404});if(!['GET','HEAD'].includes(request.method))return new Response('Method not allowed',{status:405});return new Response(request.method==='HEAD'?null:asset.body,{headers:{'content-type':asset.type,'cache-control':'no-cache','x-content-type-options':'nosniff'}})}};`);
-await cp('server/api.js','dist/server/api.js');await cp('.openai/hosting.json','dist/.openai/hosting.json');await cp('drizzle','dist/.openai/drizzle',{recursive:true});console.log('Built Nocturne with persistent storage.');
