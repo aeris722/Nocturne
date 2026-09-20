@@ -26,6 +26,9 @@ export async function handleAPI(request,env){
  const body=await request.text();if(body.length>64000)return json({error:'Request too large'},413);
  let input;try{input=JSON.parse(body)}catch{return json({error:'Invalid JSON'},400)}
  if(!Array.isArray(input.changes)||input.changes.length<1||input.changes.length>250||!input.changes.every(validate))return json({error:'Invalid changes'},400);
+ const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+ const locked=input.changes.some(({key})=>{const match=/^(?:review\/)?(\d{4}-\d{2}-\d{2})(?:\/|$)/.exec(key);return match&&match[1]!==today});
+ if(locked)return json({error:'Past and future entries are read-only.',code:'entry_locked'},409);
  const statements=input.changes.map(c=>c.value===null?db.prepare('DELETE FROM records WHERE key = ?').bind(c.key):db.prepare('INSERT INTO records (key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').bind(c.key,JSON.stringify(c.value)));
  await db.batch(statements);return json({saved:true});
  }catch(error){console.error('Nocturne storage:',error.message);return json({error:'Your progress could not be saved. Please retry.'},503)}
