@@ -44,7 +44,9 @@ const NocturneBackup = (() => {
       if (!object(exam)) fail('This backup contains invalid exam details.');
       const examDate = text(exam.date,10);
       if (examDate && !date(examDate)) fail('This backup contains an invalid exam date.');
-      return {name:text(exam.name,60),date:examDate,improvements:text(exam.improvements,3000)};
+      const normalized = {name:text(exam.name,60),date:examDate};
+      if (i === 0) normalized.improvements = text(exam.improvements,3000);
+      return normalized;
     });
     return {days,dayModes,exams};
   }
