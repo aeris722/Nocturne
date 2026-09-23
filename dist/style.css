@@ -19,7 +19,7 @@ dialog{color:var(--text);background:#000;border:1px solid #444;border-radius:20p
 @media(prefers-reduced-motion:no-preference){button{transition:background-color .16s,border-color .16s,color .16s}dialog[open]{animation:sheet-in .18s ease-out}.water-drops button:active,.check-button:active{transform:scale(.95)}@keyframes sheet-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 /* Final compact polish. */
-.dashboard-card{background:linear-gradient(145deg,#0b0b0b,#000 72%);box-shadow:inset 0 1px 0 #fff1,0 8px 24px #000}
+.dashboard-card{background:#080808;box-shadow:inset 0 1px 0 #fff1,0 8px 24px #000}
 .glance-timeline{position:relative}
 .glance-timeline:before{content:'';position:absolute;right:12px;top:-24px;width:34px;height:24px;border-top:1px solid #454545;border-right:1px solid #454545;border-radius:0 18px 0 0;filter:drop-shadow(0 0 3px #fff2)}
 .glance-note{line-height:1.25;margin-top:3px;letter-spacing:.05px}
