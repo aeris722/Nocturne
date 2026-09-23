@@ -57,7 +57,7 @@ input[type=text],input[type=date],textarea{background:#000;color:#fff;border-col
 @media(max-width:350px){.dashboard-quote blockquote{font-size:18px}.glance-timeline li{grid-template-columns:68px 1fr;gap:7px}.glance-section{padding-left:11px;padding-right:11px}}
 .header-actions #mode-button svg{width:18px;height:18px}.header-actions #mode-button.is-weekend{color:#fff;background:#1a1a1a}.header-actions #mode-button.is-weekend svg{transform:rotate(180deg)}
 .dashboard-quote blockquote{font-size:17px;line-height:1.35;max-width:560px}
-.main-quote{max-width:700px;font-size:clamp(28px,4vw,42px)!important;line-height:1.12!important}
+.main-quote{max-width:700px;font-size:clamp(22px,3vw,32px)!important;font-weight:400!important;line-height:1.2!important;letter-spacing:-.2px}
 .stats .stat{display:flex;flex-direction:column}
 .stats .stat-foot{margin-top:auto}
 .stats .stat-comparison{padding-top:8px}
