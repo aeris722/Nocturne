@@ -3,3 +3,6 @@ node_modules/
 .sites-runtime/
 dist/server/
 dist/.openai/
+.codex-finalizer/
+.presentation-build/
+output/
