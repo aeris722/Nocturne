@@ -66,7 +66,7 @@ test('exam notes keep their line breaks and do not render an edit action',()=>{
 test('history XP summary stays numeric without explanatory labels or a graph',()=>{
  const api=app();api.setState(backup.normalizeState(fixture()));api.setToday('2026-09-23');
  const html=api.statsHtml({xp:500,max:1000},true);
- assert.ok(html.includes('+500'));assert.ok(html.includes('50%'));assert.ok(html.includes('1000 XP'));
+ assert.ok(html.includes('+500'));assert.ok(html.includes('50%'));assert.ok(html.includes('>1000 <small>XP</small>'));
  for(const phrase of ['Total XP till date','maximum till date','benchmark-track','xp-segments','Across your recorded days','keeps the chain going','Every effort adds up'])assert.equal(html.includes(phrase),false);
 });
 test('dashboard XP gained bars mirror today’s check-ins, not a fixed count',()=>{
