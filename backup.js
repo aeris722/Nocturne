@@ -13,7 +13,7 @@ const NocturneBackup = (() => {
     if (value === undefined) return '';
     if (typeof value !== 'string' || value.length > limit) fail('This backup contains invalid exam details.');
     return value;
-  };
+  }; 
   const percent = value => typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100;
   function normalizeState(input) {
     if (!object(input) || !object(input.days) || !Array.isArray(input.exams) || input.exams.length > 2) fail('This file is missing valid journal data.');
