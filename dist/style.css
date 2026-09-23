@@ -56,3 +56,34 @@ input[type=text],input[type=date],textarea{background:#000;color:#fff;border-col
 .dashboard-quote{margin:0 0 22px;padding:0 0 18px;border-top:0;border-bottom:1px solid #292929}.dashboard-quote .quote-top{justify-content:flex-start;gap:10px;margin:0 0 7px}.dashboard-quote .quote-top>svg{width:13px;height:13px;color:#aaa}.dashboard-quote blockquote{max-width:680px;margin:0;font:20px/1.35 var(--serif);letter-spacing:-.1px;color:#d8d8d8}.stat-percent{font-size:11px;color:#fff;margin-top:7px}.stat-comparison{font-size:11px;color:#fff}.exam-name-line{display:block;min-width:0}.exam-name-line small,.exam-improvement{display:block;color:#aaa;font-size:10px;line-height:1.25;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}.exam-improvement{margin-top:1px}.glance-map{display:grid;gap:18px}.glance-section{border:1px solid #303030;border-radius:14px;padding:15px 14px;background:#000}.glance-section-head{display:flex;gap:11px;align-items:flex-start;padding-bottom:12px;border-bottom:1px solid #292929}.glance-number{font:24px/1 var(--serif);color:#fff}.glance-section h3{font-size:17px;font-weight:500;margin:0}.glance-section-head p{font-size:11px;color:#aaa;margin:3px 0 0}.glance-timeline{list-style:none;margin:0;padding:10px 0 0}.glance-timeline li{display:grid;grid-template-columns:78px minmax(0,1fr);gap:10px;position:relative;padding:7px 0 7px 12px;border-left:1px solid #444}.glance-timeline li:before{content:'';position:absolute;width:5px;height:5px;border:1px solid #fff;border-radius:50%;background:#000;left:-3px;top:14px}.glance-timeline time{font-size:10px;color:#aaa;white-space:nowrap}.glance-timeline strong{display:block;font-size:12px;line-height:1.35;font-weight:500}.glance-timeline span{display:block;font-size:10px;line-height:1.35;color:#aaa;margin-top:2px}.glance-footer{border-top:1px solid #292929;margin-top:8px;padding-top:10px;font-size:11px;color:#fff}
 @media(max-width:350px){.dashboard-quote blockquote{font-size:18px}.glance-timeline li{grid-template-columns:68px 1fr;gap:7px}.glance-section{padding-left:11px;padding-right:11px}}
 .header-actions #mode-button svg{width:18px;height:18px}.header-actions #mode-button.is-weekend{color:#fff;background:#1a1a1a}.header-actions #mode-button.is-weekend svg{transform:rotate(180deg)}
+/* Today is a path, not a stack of cards. */
+.stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+.dashboard-quote{padding:20px 0 26px;margin:0 0 24px;border-top:0}
+.dashboard-quote .quote-top{height:auto;margin:0 0 8px}
+.dashboard-quote blockquote{font-size:34px;line-height:1.08;max-width:620px;margin:0;color:var(--text)}
+.day-journey{position:relative;padding:8px 0 20px;overflow:hidden}
+.journey-line{position:absolute;z-index:0;left:17px;top:38px;width:42px;height:calc(100% - 58px);overflow:visible}
+.journey-line path{fill:none;stroke:#777;stroke-width:1.5;vector-effect:non-scaling-stroke}
+.journey-node{position:relative;z-index:1;display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:14px;align-items:center;min-height:78px;margin:0;padding:12px 0;background:transparent;border:0;border-radius:0}
+.journey-node:hover{background:transparent;border:0}
+.journey-dot{width:14px;height:14px;margin-left:11px;border:1px solid #aaa;border-radius:50%;background:#000;display:flex;align-items:center;justify-content:center;color:#000}
+.journey-dot svg{width:10px;height:10px;stroke-width:2.5}
+.journey-node.completed .journey-dot{background:#fff;border-color:#fff}
+.journey-node.missed .journey-dot{border-color:#777;color:#fff}
+.task-node-copy{min-width:0;padding:10px 0}
+.journey-node .task-name{font-size:18px}
+.journey-node .task-xp{margin-top:5px}
+.journey-node .task-action{min-width:48px}
+.phase-heading{position:relative;z-index:1;margin:22px 0 5px;padding-left:66px;background:#000}
+.phase-heading:first-child{margin-top:0}
+.task-time{display:none}
+@media(max-width:680px){
+ .dashboard-quote{padding:12px 0 20px;margin-bottom:17px}
+ .dashboard-quote blockquote{font-size:28px}
+ .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .journey-node{grid-template-columns:45px minmax(0,1fr) 40px;gap:10px;min-height:74px}
+ .journey-line{left:14px;width:38px}
+ .journey-dot{margin-left:8px}
+ .journey-node .task-name{font-size:16px}
+ .phase-heading{padding-left:55px}
+}
