@@ -66,5 +66,6 @@ test('history total displays the value above its label without a graph',()=>{
  const api=app();api.setState(backup.normalizeState(fixture()));api.setToday('2026-09-23');
  const html=api.statsHtml({xp:500,max:1000},true);
  assert.ok(html.indexOf('+500')<html.indexOf('Total XP till date'));
- for(const phrase of ['xp-segments','benchmark-track','Across your recorded days','keeps the chain going','Every effort adds up'])assert.equal(html.includes(phrase),false);
+ for(const phrase of ['benchmark-track','Across your recorded days','keeps the chain going','Every effort adds up'])assert.equal(html.includes(phrase),false);
+ assert.ok(html.includes('xp-segments'));
 });
