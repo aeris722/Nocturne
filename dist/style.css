@@ -69,4 +69,9 @@ input[type=text],input[type=date],textarea{background:#000;color:#fff;border-col
 .glance-timeline strong{font-size:13px;font-weight:500}
 .glance-timeline li:before{top:18px}
 .exam-name-line small,.exam-improvement{font-size:10px;letter-spacing:.1px}
+.exam-name-line{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap}
+.exam-name-line small{white-space:normal;margin-top:0}
+.stats .yesterday-xp{margin-top:auto}
+.stats .stat-comparison{margin-top:4px;padding-top:0}
+.glance-icon{font-size:19px;line-height:1}
 @media(max-width:680px){.dashboard-quote blockquote{font-size:17px}.stats .stat-comparison{padding-top:6px}}
