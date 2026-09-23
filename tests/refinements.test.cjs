@@ -9,7 +9,7 @@ function fixture() {
 function app() {
  const context=vm.createContext({Intl,Date,document:{getElementById:()=>({})}});
  const source=fs.readFileSync(require.resolve('../dist/app.js'),'utf8');
- vm.runInContext(source.slice(0,source.indexOf('const glanceButton='))+'\nthis.api={schedule,dailyMapItems,statsHtml,examsHtml,ICONS,setState(value){state=value},setToday(value){today=value;selected=value}};',context);
+ vm.runInContext(source.slice(0,source.indexOf('const glanceButton='))+'\nthis.api={schedule,dailyMapItems,statsHtml,examsHtml,dayEditorHtml,ICONS,setState(value){state=value},setToday(value){today=value;selected=value}};',context);
  return context.api;
 }
 test('legacy restore drops pattern improvements but preserves exam text and progress',()=>{
@@ -63,10 +63,32 @@ test('exam notes keep their line breaks and do not render an edit action',()=>{
  assert.equal(html.includes('Review & edit'),false);
  assert.ok(html.includes('18'));
 });
-test('history total displays the value above its label with a compact graph',()=>{
+test('history total displays the value above its label without a graph',()=>{
  const api=app();api.setState(backup.normalizeState(fixture()));api.setToday('2026-09-23');
  const html=api.statsHtml({xp:500,max:1000},true);
  assert.ok(html.indexOf('+500')<html.indexOf('Total XP till date'));
- for(const phrase of ['benchmark-track','Across your recorded days','keeps the chain going','Every effort adds up'])assert.equal(html.includes(phrase),false);
- assert.ok(html.includes('xp-segments'));
+ for(const phrase of ['benchmark-track','xp-segments','Across your recorded days','keeps the chain going','Every effort adds up'])assert.equal(html.includes(phrase),false);
+});
+test('dashboard XP gained bars mirror today’s check-ins, not a fixed count',()=>{
+ const api=app(),state=backup.normalizeState(fixture());
+ api.setState(state);api.setToday('2026-09-20');
+ const html=api.statsHtml({xp:120,max:1500});
+ const tasks=api.schedule('2026-09-20');
+ assert.equal((html.match(/<i style="--fill:/g)||[]).length,tasks.length);
+ assert.ok(html.includes(`aria-label="1 of ${tasks.length} check-ins today"`));
+ assert.ok(html.includes('--fill:100%'));
+ state.days['2026-09-20'].tasks.workout={status:'done',rating:60};
+ const partial=api.statsHtml({xp:150,max:1500});
+ assert.ok(partial.includes('--fill:60%'));
+ assert.ok(partial.includes(`aria-label="2 of ${tasks.length} check-ins today"`));
+});
+test('history shows a read-only summary for past days and an editor for today',()=>{
+ const api=app();api.setState(backup.normalizeState(fixture()));api.setToday('2026-09-23');
+ const past=api.dayEditorHtml('2026-09-20');
+ assert.ok(past.includes('day-record'));
+ assert.equal(past.includes('data-task'),false);
+ assert.equal(past.includes('data-water'),false);
+ const todayHtml=api.dayEditorHtml('2026-09-23');
+ assert.ok(todayHtml.includes('data-task'));
+ assert.ok(todayHtml.includes('data-water'));
 });
