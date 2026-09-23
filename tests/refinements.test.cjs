@@ -52,6 +52,7 @@ test('weekday map follows the requested morning and lunch sequence, with Friday 
  assert.ok(swim>items.findIndex(item=>item.id==='session1'));
  assert.ok(swim<items.findIndex(item=>item.id==='session2'));
  assert.equal(items[swim].note,'Only Friday');
+ assert.equal(items.find(item=>item.name==='Dinner').note,'Talk with parents');
  assert.equal(api.dailyMapItems('weekend').some(item=>item.name==='Swimming'),false);
 });
 test('exam notes keep their line breaks and do not render an edit action',()=>{
@@ -62,7 +63,7 @@ test('exam notes keep their line breaks and do not render an edit action',()=>{
  assert.equal(html.includes('Review & edit'),false);
  assert.ok(html.includes('18'));
 });
-test('history total displays the value above its label without a graph',()=>{
+test('history total displays the value above its label with a compact graph',()=>{
  const api=app();api.setState(backup.normalizeState(fixture()));api.setToday('2026-09-23');
  const html=api.statsHtml({xp:500,max:1000},true);
  assert.ok(html.indexOf('+500')<html.indexOf('Total XP till date'));
