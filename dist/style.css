@@ -56,10 +56,10 @@ dialog{color:var(--text);background:#000;border:1px solid #444;border-radius:20p
 .water-extra-button span{font-size:9px;font-weight:650;line-height:1;font-variant-numeric:tabular-nums}
 .water-extra-button.filled{background:#fff;color:#000;border-color:#fff}
 .water-meter-sheet{display:grid;place-items:center;margin:2px 0 10px}
-.big-water-drop{position:relative;width:min(236px,72vw);height:300px;display:grid;place-items:center;color:#f5f5f5}
-.big-water-drop>svg{position:absolute;width:100%;height:100%;stroke-width:1.1;color:#777}
-.big-water-drop i{position:absolute;left:23%;right:23%;bottom:25%;height:5px;background:#fff;border-radius:999px;transform:translateY(calc(var(--level) * -1.68));box-shadow:0 0 0 1px #000,0 0 22px #fff5;z-index:1}
-.big-water-drop b{position:absolute;bottom:14%;font:34px/1 var(--serif);font-variant-numeric:tabular-nums;z-index:1}
-.big-water-drop input{position:absolute;inset:11% 18% 16%;width:auto;height:auto;opacity:0;cursor:ns-resize;writing-mode:vertical-lr;direction:rtl;-webkit-appearance:slider-vertical;z-index:2}
-.big-water-drop:focus-within{outline:2px solid #fff;outline-offset:8px;border-radius:42% 42% 50% 50%}
+.big-water-drop{position:relative;width:min(236px,72vw);height:300px;display:grid;place-items:center;color:#f5f5f5;cursor:ns-resize;touch-action:none;user-select:none}
+.big-water-drop>svg{position:absolute;width:100%;height:100%}
+.big-water-drop .drop-shadow{fill:#151515;stroke:none}
+.big-water-drop #water-fill{fill:#fff}
+.big-water-drop b{position:absolute;bottom:14%;font:34px/1 var(--serif);font-variant-numeric:tabular-nums;z-index:1;color:#fff;mix-blend-mode:difference;pointer-events:none}
+.big-water-drop:focus-visible{outline:2px solid #fff;outline-offset:8px;border-radius:42% 42% 50% 50%}
 @media(max-width:359px){.big-water-drop{height:260px}.big-water-drop b{font-size:30px}.water-extra-button span{font-size:8px}}
