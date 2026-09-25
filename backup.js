@@ -19,7 +19,7 @@ const NocturneBackup = (() => {
     if (!object(input) || !object(input.days) || !Array.isArray(input.exams) || input.exams.length > 2) fail('This file is missing valid journal data.');
     const days = {};
     for (const [key, record] of Object.entries(input.days)) {
-      if (!date(key) || !object(record) || !object(record.tasks) || !Number.isInteger(record.water) || record.water < 0 || record.water > 4) fail('This backup contains an invalid daily record.');
+      if (!date(key) || !object(record) || !object(record.tasks) || !Number.isInteger(record.water) || record.water < 0) fail('This backup contains an invalid daily record.');
       const tasks = {};
       for (const [id, entry] of Object.entries(record.tasks)) {
         if (!/^[a-z][a-z0-9_-]{0,63}$/.test(id) || ['constructor','prototype'].includes(id) || !object(entry) || !['done','missed'].includes(entry.status)) fail('This backup contains an invalid task.');
