@@ -21,9 +21,13 @@ test('legacy restore drops pattern improvements but preserves exam text and prog
  assert.deepEqual(backup.parse(backup.serialize(restored)),restored);
 });
 test('invalid restore is still rejected',()=>{
- const input=fixture();input.days['2026-09-20'].water=9;
+ const input=fixture();input.days['2026-09-20'].water=-1;
  assert.throws(()=>backup.normalizeState(input));
  assert.throws(()=>backup.parse('{'));
+});
+test('water restore supports the open-ended meter',()=>{
+ const input=fixture();input.days['2026-09-20'].water=9;
+ assert.equal(backup.normalizeState(input).days['2026-09-20'].water,9);
 });
 test('Friday scoring schedule remains conditional and respects shortened sessions',()=>{
  const api=app(),friday=api.schedule('2026-09-25'),weekday=api.schedule('2026-09-24'),weekend=api.schedule('2026-09-26');
@@ -81,6 +85,30 @@ test('dashboard XP gained bars mirror today’s check-ins, not a fixed count',()
  const partial=api.statsHtml({xp:150,max:1500});
  assert.ok(partial.includes('--fill:60%'));
  assert.ok(partial.includes(`aria-label="2 of ${tasks.length} check-ins today"`));
+});
+test('slip check-in appears before hydration with heart icon and exact compact XP label',()=>{
+ const api=app(),state=backup.normalizeState(fixture());api.setState(state);api.setToday('2026-09-20');
+ const tasks=api.schedule('2026-09-20'),slip=tasks.at(-1);
+ assert.equal(slip.id,'slip');
+ assert.equal(slip.icon,'slip');
+ assert.equal(api.ICONS.slip,api.ICONS.heart);
+ const html=api.dayEditorHtml('2026-09-20');
+ assert.ok(html.includes('>Slip<'));
+ assert.ok(html.includes('<span class="reward">+150</span><span>−37.5</span>'));
+ assert.ok(html.indexOf('>Slip<')<html.indexOf('Hydration'));
+});
+test('water meter starts as a drag drop and caps hydration XP at 100',()=>{
+ const api=app(),state=backup.normalizeState(fixture());
+ api.setState(state);api.setToday('2026-09-20');
+ let html=api.dayEditorHtml('2026-09-20');
+ assert.ok(html.includes('data-water-meter'));
+ assert.ok(html.includes('type="range"'));
+ assert.ok(html.includes('<b>-</b>'));
+ state.days['2026-09-20'].water=9;
+ html=api.dayEditorHtml('2026-09-20');
+ assert.ok(html.includes('value="4"'));
+ assert.ok(html.includes('<b>+4</b>'));
+ assert.ok(html.includes('>+100 XP<'));
 });
 test('history shows a read-only summary for past days and an editor for today',()=>{
  const api=app();api.setState(backup.normalizeState(fixture()));api.setToday('2026-09-23');
