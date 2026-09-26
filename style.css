@@ -29,6 +29,7 @@ dialog{color:var(--text);background:#000;border:1px solid #444;border-radius:20p
 /* The daily quote stays compact at every screen size. */
 .page-heading h1.daily-quote{font-size:clamp(25px,4vw,32px);line-height:1.18;letter-spacing:-.35px;max-width:640px;margin:13px 0 0}
 @media(max-width:359px){.exam-summary{gap:5px}.exam-names strong{font-size:10px}.exam-countdown>span{font-size:25px}.exam-countdown small{font-size:7px}}
+.history-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;min-width:0}.history-edit-button{width:34px;height:34px}.history-edit-button svg{width:15px;height:15px}.history-edit-button.active{background:#f5f5f5;color:#000}
 /* Keep the dashboard quiet; reserve the glass treatment for the Rituals / Streak dock. */
 .dashboard-card{background:#000;box-shadow:none}
 .xp-segments{display:flex;align-items:flex-end;justify-content:space-between;gap:6px;height:24px;margin-top:10px;padding:0 2px}
