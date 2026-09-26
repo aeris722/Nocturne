@@ -9,7 +9,7 @@ function fixture() {
 function app() {
  const context=vm.createContext({Intl,Date,document:{getElementById:()=>({})}});
  const source=fs.readFileSync(require.resolve('../dist/app.js'),'utf8');
- vm.runInContext(source.slice(0,source.indexOf('const glanceButton='))+'\nthis.api={schedule,dailyMapItems,statsHtml,examsHtml,dayEditorHtml,ICONS,setState(value){state=value},setToday(value){today=value;selected=value}};',context);
+ vm.runInContext(source.slice(0,source.indexOf('const glanceButton='))+'\nthis.api={schedule,dailyMapItems,statsHtml,examsHtml,dayEditorHtml,ICONS,setState(value){state=value},setToday(value){today=value;selected=value},setEditingDay(value){editingDay=value}};',context);
  return context.api;
 }
 test('legacy restore drops pattern improvements but preserves exam text and progress',()=>{
@@ -112,12 +112,17 @@ test('fourth hydration check-in opens the big drop meter and keeps XP capped',()
  assert.ok(html.includes('<span>+3</span>'));
  assert.ok(html.includes('>+100 XP<'));
 });
-test('history shows a read-only summary for past days and an editor for today',()=>{
+test('history shows a summary first, then an editor for past days after edit is enabled',()=>{
  const api=app();api.setState(backup.normalizeState(fixture()));api.setToday('2026-09-23');
  const past=api.dayEditorHtml('2026-09-20');
  assert.ok(past.includes('day-record'));
  assert.equal(past.includes('data-task'),false);
  assert.equal(past.includes('data-water'),false);
+ api.setEditingDay('2026-09-20');
+ const editingPast=api.dayEditorHtml('2026-09-20');
+ assert.ok(editingPast.includes('data-task'));
+ assert.ok(editingPast.includes('data-water'));
+ assert.ok(editingPast.includes('day-record'));
  const todayHtml=api.dayEditorHtml('2026-09-23');
  assert.ok(todayHtml.includes('data-task'));
  assert.ok(todayHtml.includes('data-water'));
