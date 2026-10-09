@@ -9,7 +9,7 @@ function fixture() {
 function app() {
  const context=vm.createContext({Intl,Date,document:{getElementById:()=>({})}});
  const source=fs.readFileSync(require.resolve('../dist/app.js'),'utf8');
- vm.runInContext(source.slice(0,source.indexOf('const glanceButton='))+'\nthis.api={schedule,dailyMapItems,statsHtml,examsHtml,dayEditorHtml,ICONS,setState(value){state=value},setToday(value){today=value;selected=value},setEditingDay(value){editingDay=value}};',context);
+ vm.runInContext(source.slice(0,source.indexOf('const glanceButton='))+'\nthis.api={waterXP,schedule,dailyMapItems,statsHtml,examsHtml,dayEditorHtml,ICONS,setState(value){state=value},setToday(value){today=value;selected=value},setEditingDay(value){editingDay=value}};',context);
  return context.api;
 }
 test('legacy restore drops pattern improvements but preserves exam text and progress',()=>{
@@ -130,4 +130,13 @@ test('history shows a summary first, then an editor for past days after edit is 
  const todayHtml=api.dayEditorHtml('2026-09-23');
  assert.ok(todayHtml.includes('data-task'));
  assert.ok(todayHtml.includes('data-water'));
+});
+
+test('fractional hydration earns 25 XP per litre and survives backup round trips',()=>{
+ const api=app();api.setToday('2026-09-20');
+ for(const [litres,xp] of [[3,75],[3.5,87.5],[3.99,99.75]]){
+  assert.equal(api.waterXP('2026-09-20',litres),xp);
+  const input=fixture();input.days['2026-09-20'].water=litres;
+  assert.equal(backup.parse(backup.serialize(input)).days['2026-09-20'].water,litres);
+ }
 });
