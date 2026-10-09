@@ -48,7 +48,7 @@ test('each map activity has its own defined icon',()=>{
 });
 test('weekday map follows the requested morning and lunch sequence, with Friday inline',()=>{
  const api=app(),items=api.dailyMapItems('weekday');
- assert.deepEqual(Array.from(items.slice(0,9),item=>item.name),['Wake up','Freshen up','Workout','Bath','Dry fruits + water','Journal','Meditate','Breakfast','Allen class']);
+ assert.deepEqual(Array.from(items.slice(0,8),item=>item.name),['Rise & Begin','Freshen up','Workout','Bath','Dry fruits + water','Meditate','Breakfast','Allen class']);
  assert.equal(items.find(item=>item.name==='Lunch').time,'14:00–14:30');
  assert.equal(items.find(item=>item.name==='Sleep').time,'14:30–15:20');
  assert.ok(items.some(item=>item.name==='Wake up'&&item.time==='15:20'));
@@ -86,20 +86,24 @@ test('dashboard XP gained bars mirror today’s check-ins, not a fixed count',()
  assert.ok(partial.includes('--fill:60%'));
  assert.ok(partial.includes(`aria-label="2 of ${tasks.length} check-ins today"`));
 });
-test('daily check-in matches the normal ritual card style before hydration',()=>{
- const api=app(),state=backup.normalizeState(fixture());api.setState(state);api.setToday('2026-09-20');
- const tasks=api.schedule('2026-09-20'),daily=tasks.at(-1);
- assert.equal(daily.id,'dailycheck');
- assert.equal(daily.name,'Daily check in');
- assert.equal(daily.time,'All Day');
- assert.equal(daily.max,100);
- assert.equal(daily.penalty,25);
- assert.ok(api.ICONS.dailycheck);
- const html=api.dayEditorHtml('2026-09-20');
- assert.ok(html.includes('>Daily check in<'));
- assert.ok(html.includes('<div class="task-time">All Day</div>'));
- assert.ok(html.includes('<span class="reward">+100 XP</span><span class="sep">/</span><span>−25 XP</span>'));
- assert.ok(html.indexOf('>Daily check in<')<html.indexOf('Hydration'));
+test('removed daily check-in is ignored in backups and schedules; journal is in the evening',()=>{
+ const input=fixture();input.days['2026-09-20'].tasks.dailycheck={status:'obsolete'};
+ input.days['2026-09-20'].water=3.99;
+ const restored=backup.parse(backup.serialize(input));
+ assert.equal('dailycheck' in restored.days['2026-09-20'].tasks,false);
+ assert.equal(restored.days['2026-09-20'].water,3.99);
+ assert.deepEqual(restored.days['2026-09-20'].tasks.wake,input.days['2026-09-20'].tasks.wake);
+ const api=app();
+ for(const day of ['2026-09-24','2026-09-25','2026-09-26']){
+  const tasks=api.schedule(day);
+  assert.equal(tasks.some(t=>t.id==='dailycheck'),false);
+  assert.equal(tasks.find(t=>t.id==='journal').phase,'Evening practice');
+  assert.equal(tasks.filter(t=>t.id==='journal').length,1);
+ }
+ for(const mode of ['weekday','weekend']){
+  const items=api.dailyMapItems(mode);
+  assert.ok(items.findIndex(t=>t.id==='journal')>items.findIndex(t=>t.id==='session3'));
+ }
 });
 test('fourth hydration check-in opens the big drop meter and keeps XP capped',()=>{
  const api=app(),state=backup.normalizeState(fixture());
