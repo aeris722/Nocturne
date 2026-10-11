@@ -9,7 +9,7 @@ function fixture() {
 function app() {
  const context=vm.createContext({Intl,Date,document:{getElementById:()=>({})}});
  const source=fs.readFileSync(require.resolve('../dist/app.js'),'utf8');
- vm.runInContext(source.slice(0,source.indexOf('const glanceButton='))+'\nthis.api={formatDuration,elapsedTimer,pauseSessionTimer,waterXP,schedule,dailyMapItems,statsHtml,examsHtml,dayEditorHtml,ICONS,setState(value){state=value},setToday(value){today=value;selected=value},setEditingDay(value){editingDay=value}};',context);
+ vm.runInContext(source.slice(0,source.indexOf('const glanceButton='))+'\nthis.api={taskXP,plannedDuration,parseStudyTime,summary,formatDuration,elapsedTimer,pauseSessionTimer,waterXP,schedule,dailyMapItems,statsHtml,examsHtml,dayEditorHtml,ICONS,setState(value){state=value},setToday(value){today=value;selected=value},setEditingDay(value){editingDay=value}};',context);
  return context.api;
 }
 test('legacy restore drops pattern improvements but preserves exam text and progress',()=>{
@@ -166,4 +166,37 @@ test('timers use elapsed timestamps, preserve pauses, and format full hours',()=
  assert.equal(api.formatDuration(3723000),'01:02:03');
  assert.equal(api.formatDuration(360000000),'100:00:00');
  assert.equal(api.elapsedTimer({elapsedMs:0,startedAt:5000},4000),0);
+});
+
+test('time and focus jointly determine XP, capped at the planned duration',()=>{
+ const api=app(),t=api.schedule('2026-10-12').find(t=>t.id==='session1');
+ assert.equal(api.plannedDuration(t),7200000);
+ for(const [minutes,rating,xp] of [[0,100,0],[30,100,50],[60,100,100],[120,50,100],[120,90,180],[180,100,200],[120,0,0]]){
+  assert.equal(api.taskXP(t,{status:'done',rating,scoringVersion:1,durationMs:minutes*60000,targetMs:7200000}),xp);
+ }
+ assert.equal(api.taskXP(t,{status:'done',rating:75}),150);
+ assert.equal(api.taskXP(t,{status:'missed',rating:0}),-50);
+ assert.equal(api.taskXP(t,null,true),-50);
+});
+test('duration parsing validates hours minutes and seconds',()=>{
+ const api=app();
+ for(const value of ['', '1:30','01:60:00','-01:00:00','01:00:60','abc'])assert.equal(api.parseStudyTime(value),null);
+ assert.equal(api.parseStudyTime('01:30:15'),5415000);
+ assert.equal(api.parseStudyTime('00:00:00'),0);
+});
+test('all focus sessions use their own scheduled target',()=>{
+ const api=app(),tasks=api.schedule('2026-10-11').filter(t=>t.type==='focus');
+ assert.deepEqual(Array.from(tasks,t=>api.plannedDuration(t)/60000),[180,150,120,45,180,60]);
+ for(const t of tasks)assert.equal(api.taskXP(t,{status:'done',rating:80,scoringVersion:1,durationMs:api.plannedDuration(t)/2,targetMs:api.plannedDuration(t)}),80);
+});
+test('new scores survive backup restore and agree with dashboard and history',()=>{
+ const api=app(),state=fixture(),day='2026-09-20';
+ state.days[day].tasks.session1={status:'done',rating:100,scoringVersion:1,durationMs:3600000,targetMs:7200000};
+ const restored=backup.parse(backup.serialize(state));
+ assert.deepEqual(restored.days[day].tasks.session1,state.days[day].tasks.session1);
+ api.setState(restored);api.setToday(day);
+ assert.equal(api.summary(day).xp,220);
+ assert.ok(api.dayEditorHtml(day).includes('+100 XP'));
+ assert.ok(api.statsHtml(api.summary(day)).includes('--fill:50%'));
+ state.days[day].tasks.session1.targetMs=0;assert.throws(()=>backup.normalizeState(state));
 });
