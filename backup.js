@@ -42,7 +42,7 @@ const NocturneBackup = (() => {
         const timers = {};
         for (const [id, timer] of Object.entries(record.timers)) {
           if (!['session1','session2','session3','session4','weekend1','weekend2'].includes(id)) continue;
-          if (!object(timer) || !Number.isFinite(timer.elapsedMs) || timer.elapsedMs < 0 || (timer.startedAt !== null && (!Number.isFinite(timer.startedAt) || timer.startedAt < 0)) || typeof timer.goal !== 'string' || timer.goal.length > 500) fail('This backup contains an invalid session timer.');
+          if (!object(timer) || !Number.isSafeInteger(timer.elapsedMs) || timer.elapsedMs < 0 || (timer.startedAt !== null && (!Number.isSafeInteger(timer.startedAt) || timer.startedAt < 0)) || typeof timer.goal !== 'string' || timer.goal.length > 500) fail('This backup contains an invalid session timer.');
           timers[id] = {elapsedMs:timer.elapsedMs,startedAt:timer.startedAt,goal:timer.goal};
         }
         days[key].timers = timers;
