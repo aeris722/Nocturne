@@ -9,7 +9,7 @@ function fixture() {
 function app() {
  const context=vm.createContext({Intl,Date,document:{getElementById:()=>({})}});
  const source=fs.readFileSync(require.resolve('../dist/app.js'),'utf8');
- vm.runInContext(source.slice(0,source.indexOf('const glanceButton='))+'\nthis.api={waterXP,schedule,dailyMapItems,statsHtml,examsHtml,dayEditorHtml,ICONS,setState(value){state=value},setToday(value){today=value;selected=value},setEditingDay(value){editingDay=value}};',context);
+ vm.runInContext(source.slice(0,source.indexOf('const glanceButton='))+'\nthis.api={formatDuration,elapsedTimer,pauseSessionTimer,waterXP,schedule,dailyMapItems,statsHtml,examsHtml,dayEditorHtml,ICONS,setState(value){state=value},setToday(value){today=value;selected=value},setEditingDay(value){editingDay=value}};',context);
  return context.api;
 }
 test('legacy restore drops pattern improvements but preserves exam text and progress',()=>{
@@ -29,14 +29,20 @@ test('restore supports the full extra water range',()=>{
  const input=fixture();input.days['2026-09-20'].water=6;
  assert.equal(backup.normalizeState(input).days['2026-09-20'].water,6);
 });
-test('Friday scoring schedule remains conditional and respects shortened sessions',()=>{
- const api=app(),friday=api.schedule('2026-09-25'),weekday=api.schedule('2026-09-24'),weekend=api.schedule('2026-09-26');
- assert.equal(friday.find(t=>t.id==='session1').time,'15:30–17:30');
- assert.equal(friday.find(t=>t.id==='swimming').time,'17:30–19:00');
- assert.equal(friday.find(t=>t.id==='session2').time,'19:00–21:30');
- assert.equal(weekday.some(t=>t.id==='swimming'),false);
- assert.equal(weekend.some(t=>t.id==='swimming'),false);
- assert.ok(weekend.some(t=>t.id==='weekend1'));assert.ok(weekend.some(t=>t.id==='weekend2'));
+test('all days share four 200 XP sessions; weekends add two morning sessions',()=>{
+ const api=app();
+ for(const day of ['2026-09-24','2026-09-25','2026-09-26']){
+  const tasks=api.schedule(day),focus=tasks.filter(t=>t.type==='focus');
+  assert.equal(tasks.some(t=>t.id==='class'||t.id==='swimming'),false);
+  assert.ok(focus.every(t=>t.max===200&&t.penalty===50));
+  assert.deepEqual(Array.from(focus.filter(t=>t.id.startsWith('session')),t=>[t.name,t.time]),[
+   ['Session I - Major','15:30–17:30'],['Session II - Minor','17:30–18:15'],['Session III - Advanced','18:30–21:30'],['Session IV - Minor','22:00–23:00']]);
+  assert.equal(tasks.find(t=>t.id==='wake').time,'06:20');
+  assert.equal(focus.length,day==='2026-09-26'?6:4);
+ }
+ const weekend=api.schedule('2026-09-26');
+ assert.equal(weekend.find(t=>t.id==='weekend1').time,'08:00–11:00');
+ assert.equal(weekend.find(t=>t.id==='weekend2').time,'11:30–14:00');
 });
 test('each map activity has its own defined icon',()=>{
  const api=app();
@@ -46,16 +52,13 @@ test('each map activity has its own defined icon',()=>{
   assert.equal(new Set(paths).size,items.length,'No map activities may share an icon');
  }
 });
-test('weekday map follows the requested morning and lunch sequence, with Friday inline',()=>{
+test('weekday map follows the requested morning and lunch sequence, without class focus',()=>{
  const api=app(),items=api.dailyMapItems('weekday');
- assert.deepEqual(Array.from(items.slice(0,8),item=>item.name),['Rise & Begin','Freshen up','Workout','Bath','Dry fruits + water','Meditate','Breakfast','Allen class']);
+ assert.deepEqual(Array.from(items.slice(0,7),item=>item.name),['Rise & Begin','Freshen up','Workout','Bath','Dry fruits + water','Meditate','Breakfast']);
  assert.equal(items.find(item=>item.name==='Lunch').time,'14:00–14:30');
  assert.equal(items.find(item=>item.name==='Sleep').time,'14:30–15:20');
  assert.ok(items.some(item=>item.name==='Wake up'&&item.time==='15:20'));
- const swim=items.findIndex(item=>item.name==='Swimming');
- assert.ok(swim>items.findIndex(item=>item.id==='session1'));
- assert.ok(swim<items.findIndex(item=>item.id==='session2'));
- assert.equal(items[swim].note,'Only Friday');
+ assert.equal(items.some(item=>item.id==='class'||item.name==='Swimming'),false);
  assert.equal(items.find(item=>item.name==='Dinner').note,'Talk with parents');
  assert.equal(api.dailyMapItems('weekend').some(item=>item.name==='Swimming'),false);
 });
@@ -139,4 +142,28 @@ test('fractional hydration earns 25 XP per litre and survives backup round trips
   const input=fixture();input.days['2026-09-20'].water=litres;
   assert.equal(backup.parse(backup.serialize(input)).days['2026-09-20'].water,litres);
  }
+});
+
+test('backups preserve running and paused timers and ignore removed class focus',()=>{
+ const input=fixture(),day=input.days['2026-09-20'];
+ day.tasks.class={status:'done',rating:100};
+ day.timers={session1:{elapsedMs:12345,startedAt:1791700000000,goal:'Finish chapter 2'},session2:{elapsedMs:3750000,startedAt:null,goal:'Practice'}};
+ const restored=backup.parse(backup.serialize(input));
+ assert.deepEqual(restored.days['2026-09-20'].timers,day.timers);
+ assert.equal('class' in restored.days['2026-09-20'].tasks,false);
+ day.timers.session1.elapsedMs=-1;assert.throws(()=>backup.normalizeState(input));
+ day.timers.session1.elapsedMs=0;day.timers.session1.goal='x'.repeat(501);assert.throws(()=>backup.normalizeState(input));
+});
+
+test('timers use elapsed timestamps, preserve pauses, and format full hours',()=>{
+ const api=app(),timer={elapsedMs:1000,startedAt:10000,goal:'Read'};
+ assert.equal(api.elapsedTimer(timer,15500),6500);
+ api.pauseSessionTimer(timer,15500);
+ assert.equal(timer.startedAt,null);
+ assert.equal(api.elapsedTimer(timer,999999),6500);
+ timer.startedAt=20000;
+ assert.equal(api.elapsedTimer(timer,23000),9500);
+ assert.equal(api.formatDuration(3723000),'01:02:03');
+ assert.equal(api.formatDuration(360000000),'100:00:00');
+ assert.equal(api.elapsedTimer({elapsedMs:0,startedAt:5000},4000),0);
 });
