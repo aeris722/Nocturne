@@ -171,8 +171,8 @@ test('timers use elapsed timestamps, preserve pauses, and format full hours',()=
 test('time and focus jointly determine XP, capped at the planned duration',()=>{
  const api=app(),t=api.schedule('2026-10-12').find(t=>t.id==='session1');
  assert.equal(api.plannedDuration(t),7200000);
- for(const [minutes,rating,xp] of [[0,100,0],[30,100,50],[60,100,100],[120,50,100],[120,90,180],[180,100,200],[120,0,0]]){
-  assert.equal(api.taskXP(t,{status:'done',rating,scoringVersion:1,durationMs:minutes*60000,targetMs:7200000}),xp);
+ for(const [minutes,rating,xp] of [[0,100,0],[30,100,0],[60,100,0],[61,100,200*61/120],[120,50,100],[120,90,180],[180,100,200],[120,0,0]]){
+  assert.ok(Math.abs(api.taskXP(t,{status:'done',rating,scoringVersion:1,durationMs:minutes*60000,targetMs:7200000})-xp)<1e-9);
  }
  assert.equal(api.taskXP(t,{status:'done',rating:75}),150);
  assert.equal(api.taskXP(t,{status:'missed',rating:0}),-50);
@@ -187,16 +187,25 @@ test('duration parsing validates hours minutes and seconds',()=>{
 test('all focus sessions use their own scheduled target',()=>{
  const api=app(),tasks=api.schedule('2026-10-11').filter(t=>t.type==='focus');
  assert.deepEqual(Array.from(tasks,t=>api.plannedDuration(t)/60000),[180,150,120,45,180,60]);
- for(const t of tasks)assert.equal(api.taskXP(t,{status:'done',rating:80,scoringVersion:1,durationMs:api.plannedDuration(t)/2,targetMs:api.plannedDuration(t)}),80);
+ for(const t of tasks)assert.equal(api.taskXP(t,{status:'done',rating:80,scoringVersion:1,durationMs:api.plannedDuration(t)*.75,targetMs:api.plannedDuration(t)}),120);
 });
 test('new scores survive backup restore and agree with dashboard and history',()=>{
  const api=app(),state=fixture(),day='2026-09-20';
- state.days[day].tasks.session1={status:'done',rating:100,scoringVersion:1,durationMs:3600000,targetMs:7200000};
+ state.days[day].tasks.session1={status:'done',rating:100,scoringVersion:1,durationMs:5400000,targetMs:7200000};
  const restored=backup.parse(backup.serialize(state));
  assert.deepEqual(restored.days[day].tasks.session1,state.days[day].tasks.session1);
  api.setState(restored);api.setToday(day);
- assert.equal(api.summary(day).xp,220);
- assert.ok(api.dayEditorHtml(day).includes('+100 XP'));
- assert.ok(api.statsHtml(api.summary(day)).includes('--fill:50%'));
+ assert.equal(api.summary(day).xp,270);
+ assert.ok(api.dayEditorHtml(day).includes('+150 XP'));
+ assert.ok(api.statsHtml(api.summary(day)).includes('--fill:75%'));
  state.days[day].tasks.session1.targetMs=0;assert.throws(()=>backup.normalizeState(state));
+});
+
+test('strict halfway threshold holds for every session',()=>{
+ const api=app();
+ for(const t of api.schedule('2026-10-11').filter(t=>t.type==='focus')){
+  const targetMs=api.plannedDuration(t);
+  for(const durationMs of [targetMs/2-1000,targetMs/2])assert.equal(api.taskXP(t,{status:'done',rating:100,scoringVersion:1,durationMs,targetMs}),0);
+  assert.ok(api.taskXP(t,{status:'done',rating:100,scoringVersion:1,durationMs:targetMs/2+1000,targetMs})>100);
+ }
 });
