@@ -9,7 +9,7 @@ function fixture() {
 function app() {
  const context=vm.createContext({Intl,Date,document:{getElementById:()=>({})}});
  const source=fs.readFileSync(require.resolve('../dist/app.js'),'utf8');
- vm.runInContext(source.slice(0,source.indexOf('const glanceButton='))+'\nthis.api={taskXP,plannedDuration,parseStudyTime,summary,formatDuration,elapsedTimer,pauseSessionTimer,waterXP,schedule,dailyMapItems,statsHtml,examsHtml,dayEditorHtml,ICONS,setState(value){state=value},setToday(value){today=value;selected=value},setEditingDay(value){editingDay=value}};',context);
+ vm.runInContext(source.slice(0,source.indexOf('const glanceButton='))+'\nthis.api={fmt,taskXP,plannedDuration,parseStudyTime,summary,formatDuration,elapsedTimer,pauseSessionTimer,waterXP,schedule,dailyMapItems,statsHtml,examsHtml,dayEditorHtml,ICONS,setState(value){state=value},setToday(value){today=value;selected=value},setEditingDay(value){editingDay=value}};',context);
  return context.api;
 }
 test('legacy restore drops pattern improvements but preserves exam text and progress',()=>{
@@ -208,4 +208,17 @@ test('strict halfway threshold holds for every session',()=>{
   for(const durationMs of [targetMs/2-1000,targetMs/2])assert.equal(api.taskXP(t,{status:'done',rating:100,scoringVersion:1,durationMs,targetMs}),0);
   assert.ok(api.taskXP(t,{status:'done',rating:100,scoringVersion:1,durationMs:targetMs/2+1000,targetMs})>100);
  }
+});
+
+test('XP display keeps hundredths and zero-XP check-ins remain counted',()=>{
+ const api=app();assert.equal(api.fmt(93.75),'93.75');assert.equal(api.fmt(100.027777),'100.03');assert.equal(api.fmt(100),'100');
+ const state=fixture(),day='2026-09-20';state.days[day].tasks.session1={status:'done',rating:100,scoringVersion:1,durationMs:3600000,targetMs:7200000};
+ api.setState(state);api.setToday(day);
+ const html=api.statsHtml(api.summary(day));assert.ok(html.includes('aria-label="2 of '));assert.equal(api.summary(day).done,2);
+});
+test('backup rejects unsafe timer values without mutating the input',()=>{
+ const state=fixture(),day=state.days['2026-09-20'];
+ day.timers={session1:{elapsedMs:1e100,startedAt:null,goal:'Study'}};
+ assert.throws(()=>backup.normalizeState(state));assert.equal(day.timers.session1.elapsedMs,1e100);
+ day.timers.session1.elapsedMs=0;day.timers.session1.startedAt=1e100;assert.throws(()=>backup.normalizeState(state));
 });
