@@ -27,6 +27,10 @@ const NocturneBackup = (() => {
         const rating = entry.rating ?? (entry.status === 'done' ? 100 : 0);
         if (!percent(rating)) fail('Task ratings must be between 0 and 100.');
         tasks[id] = {status:entry.status, rating};
+        if (entry.scoringVersion !== undefined) {
+          if (entry.scoringVersion !== 1 || !Number.isSafeInteger(entry.durationMs) || entry.durationMs < 0 || !Number.isSafeInteger(entry.targetMs) || entry.targetMs <= 0) fail('This backup contains invalid session scoring data.');
+          Object.assign(tasks[id],{scoringVersion:1,durationMs:entry.durationMs,targetMs:entry.targetMs});
+        }
         if (entry.subjects !== undefined) {
           if (!Array.isArray(entry.subjects) || entry.subjects.length !== 3 || !entry.subjects.every(percent)) fail('This backup contains invalid class ratings.');
           tasks[id].subjects = [...entry.subjects];
