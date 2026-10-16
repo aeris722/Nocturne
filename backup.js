@@ -37,6 +37,7 @@ const NocturneBackup = (() => {
         }
       }
       days[key] = {tasks,water:record.water};
+      if (record.scheduleMerged === true) days[key].scheduleMerged = true;
       if (record.timers !== undefined) {
         if (!object(record.timers)) fail('This backup contains invalid session timers.');
         const timers = {};
@@ -47,6 +48,26 @@ const NocturneBackup = (() => {
         }
         days[key].timers = timers;
       }
+    }
+    // Keep the previous schedule in history; combine existing new-schedule data once.
+    for (const [key, day] of Object.entries(days)) {
+      if (key < '2026-10-16' || day.scheduleMerged || (!day.tasks.session1 && !day.tasks.session4 && !day.timers?.session1 && !day.timers?.session4)) continue;
+      const ids = ['session1','session4'], completed = ids.map(id=>day.tasks[id]).filter(e=>e?.status==='done');
+      const end = new Date(key+'T23:59:59.999+05:30').getTime();
+      const timerTime = timer => timer ? timer.elapsedMs + (timer.startedAt === null ? 0 : Math.max(0,Math.min(Date.now(),end)-timer.startedAt)) : 0;
+      const durations = ids.map(id=>day.tasks[id]?.durationMs ?? timerTime(day.timers?.[id]));
+      if (completed.length) {
+        const weights = ids.map((id,i)=>day.tasks[id]?.status==='done'?durations[i]:0), totalWeight=weights.reduce((a,b)=>a+b,0);
+        const rating = totalWeight ? ids.reduce((sum,id,i)=>sum+(day.tasks[id]?.rating||0)*weights[i],0)/totalWeight : completed.reduce((sum,e)=>sum+e.rating,0)/completed.length;
+        day.tasks.session1={status:'done',rating};
+        if (durations.some(n=>n>0)||completed.every(e=>e.scoringVersion===1)) Object.assign(day.tasks.session1,{scoringVersion:1,durationMs:durations.reduce((a,b)=>a+b,0),targetMs:165*60000});
+      } else if (ids.some(id=>day.tasks[id]?.status==='missed')) day.tasks.session1={status:'missed',rating:0};
+      if (day.timers?.session1 || day.timers?.session4) {
+        const previous=ids.map(id=>day.timers?.[id]);
+        day.timers.session1={elapsedMs:durations.reduce((a,b)=>a+b,0),startedAt:previous.some(t=>t?.startedAt!==null&&t?.startedAt!==undefined)&&key===new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())?Date.now():null,goal:previous.map(t=>t?.goal).filter(Boolean).join(' · ').slice(0,500)};
+        if(day.timers.session4)day.timers.session4={...day.timers.session4,elapsedMs:timerTime(day.timers.session4),startedAt:null};
+      }
+      day.scheduleMerged=true;
     }
     const dayModes = {};
     if (input.dayModes !== undefined && !object(input.dayModes)) fail('This backup contains invalid schedule settings.');
