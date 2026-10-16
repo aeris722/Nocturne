@@ -28,6 +28,8 @@ Source is in `dist/`. Publish with `git subtree push --prefix dist origin gh-pag
 
 ## Weekly skip and daily summary
 
-Choose up to two individual weekday study sessions per Monday–Sunday week. Calendar weekends and days using the weekend schedule cannot be skipped. Skipped sessions do not count toward XP, maximum XP or penalties.
+From Streaks, choose up to two individual weekday study sessions per Monday–Sunday week. Calendar weekends and days using the weekend schedule cannot be skipped. Skipped sessions do not count toward XP, maximum XP or penalties.
 
-The Yesterday button opens a visual report of recorded study time, average checked-in focus ratings, session details, completed rituals, XP and hydration. Missing durations remain unknown; old running timers stop counting at midnight IST.
+The Yesterday button beside Your rituals opens a visual report of recorded study time, average checked-in focus ratings, session details, completed rituals, XP and hydration. Missing durations remain unknown; old running timers stop counting at midnight IST.
+
+Inside day analysis, select any date up to today or use the day arrows. A short note to self saves per date and is included in JSON backups without affecting XP or recorded activity.

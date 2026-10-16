@@ -88,6 +88,12 @@ const NocturneBackup = (() => {
         seen.add(key);return {day:item.day,id:item.id};
       });
     }
+    const dayNotes = {};
+    if (input.dayNotes !== undefined && !object(input.dayNotes)) fail('This backup contains invalid day notes.');
+    for (const [key, note] of Object.entries(input.dayNotes || {})) {
+      if (!date(key) || typeof note !== 'string' || note.length > 500) fail('This backup contains an invalid day note.');
+      if (note.trim()) dayNotes[key] = note;
+    }
     const exams = Array.from({length:2}, (_, i) => {
       const exam = input.exams[i] ?? {};
       if (!object(exam)) fail('This backup contains invalid exam details.');
@@ -97,7 +103,7 @@ const NocturneBackup = (() => {
       if (i === 0) normalized.improvements = text(exam.improvements,3000);
       return normalized;
     });
-    return {days,dayModes,weeklySkips,exams};
+    return {days,dayModes,weeklySkips,dayNotes,exams};
   }
   function parse(source) {
     let payload;

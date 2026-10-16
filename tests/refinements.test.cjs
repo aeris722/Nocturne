@@ -9,7 +9,7 @@ function fixture() {
 function app() {
  const context=vm.createContext({Intl,Date,document:{getElementById:()=>({})}});
  const source=fs.readFileSync(require.resolve('../dist/app.js'),'utf8');
- vm.runInContext(source.slice(0,source.indexOf('const glanceButton='))+fs.readFileSync(require.resolve('../dist/day-summary.js'),'utf8')+'\nthis.api={dayStudyReport,canSkipSession,weeklySkipsFor,weekFor,setWeeklySkips,currentDay,fmt,taskXP,plannedDuration,parseStudyTime,summary,formatDuration,elapsedTimer,pauseSessionTimer,waterXP,schedule,dailyMapItems,statsHtml,examsHtml,dayEditorHtml,ICONS,setState(value){state=value},setToday(value){today=value;selected=value},setEditingDay(value){editingDay=value}};',context);
+ vm.runInContext(source.slice(0,source.indexOf('const glanceButton='))+fs.readFileSync(require.resolve('../dist/day-summary.js'),'utf8')+'\nthis.api={isAnalysisDate,setDayNote,dayStudyReport,canSkipSession,weeklySkipsFor,weekFor,setWeeklySkips,currentDay,fmt,taskXP,plannedDuration,parseStudyTime,summary,formatDuration,elapsedTimer,pauseSessionTimer,waterXP,schedule,dailyMapItems,statsHtml,examsHtml,dayEditorHtml,ICONS,setState(value){state=value},setToday(value){today=value;selected=value},setEditingDay(value){editingDay=value}};',context);
  return context.api;
 }
 test('legacy restore drops pattern improvements but preserves exam text and progress',()=>{
@@ -299,4 +299,25 @@ test('existing major-only duration uses the new merged target without inventing 
  const normalized=backup.normalizeState(data),entry=normalized.days['2026-10-16'].tasks.session1;
  assert.equal(entry.durationMs,7200000);assert.equal(entry.targetMs,9900000);
  assert.deepEqual(backup.parse(backup.serialize(normalized)),normalized);
+});
+
+test('analysis notes are date-specific without creating scored daily records',()=>{
+ const api=app(),data=backup.normalizeState(fixture());api.setState(data);
+ const before=api.summary('2026-10-14');
+ assert.equal(api.setDayNote('2026-10-14','Keep focus.\nTake a break.'),true);
+ assert.equal(api.setDayNote('2026-10-15','A separate note'),true);
+ assert.equal(data.dayNotes['2026-10-14'],'Keep focus.\nTake a break.');
+ assert.equal(data.dayNotes['2026-10-15'],'A separate note');
+ assert.equal(data.days['2026-10-14'],undefined);
+ assert.deepEqual(api.summary('2026-10-14'),before);
+ assert.deepEqual(backup.parse(backup.serialize(data)).dayNotes,data.dayNotes);
+ assert.equal(api.setDayNote('2026-10-14',''),true);assert.equal(data.dayNotes['2026-10-14'],undefined);
+});
+test('analysis dates and note backups reject invalid data',()=>{
+ const api=app();
+ for(const day of ['2026-02-30','invalid','9999-12-31','__proto__','0000-01-01']){assert.equal(api.isAnalysisDate(day),false);assert.equal(api.setDayNote(day,'Note'),false)}
+ assert.equal(api.isAnalysisDate('2026-10-15'),true);
+ assert.equal(api.setDayNote('2026-10-15','x'.repeat(501)),false);
+ for(const dayNotes of [[],null,{'2026-02-30':'bad'},{'2026-10-15':42},{'2026-10-15':'x'.repeat(501)}])assert.throws(()=>backup.normalizeState({...fixture(),dayNotes}));
+ assert.deepEqual(backup.normalizeState(fixture()).dayNotes,{});
 });
