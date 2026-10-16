@@ -9,7 +9,7 @@ function fixture() {
 function app() {
  const context=vm.createContext({Intl,Date,document:{getElementById:()=>({})}});
  const source=fs.readFileSync(require.resolve('../dist/app.js'),'utf8');
- vm.runInContext(source.slice(0,source.indexOf('const glanceButton='))+'\nthis.api={weekFor,setWeeklySkips,currentDay,fmt,taskXP,plannedDuration,parseStudyTime,summary,formatDuration,elapsedTimer,pauseSessionTimer,waterXP,schedule,dailyMapItems,statsHtml,examsHtml,dayEditorHtml,ICONS,setState(value){state=value},setToday(value){today=value;selected=value},setEditingDay(value){editingDay=value}};',context);
+ vm.runInContext(source.slice(0,source.indexOf('const glanceButton='))+fs.readFileSync(require.resolve('../dist/day-summary.js'),'utf8')+'\nthis.api={dayStudyReport,canSkipSession,weeklySkipsFor,weekFor,setWeeklySkips,currentDay,fmt,taskXP,plannedDuration,parseStudyTime,summary,formatDuration,elapsedTimer,pauseSessionTimer,waterXP,schedule,dailyMapItems,statsHtml,examsHtml,dayEditorHtml,ICONS,setState(value){state=value},setToday(value){today=value;selected=value},setEditingDay(value){editingDay=value}};',context);
  return context.api;
 }
 test('legacy restore drops pattern improvements but preserves exam text and progress',()=>{
@@ -232,12 +232,12 @@ test('weekly skips remove only dated sessions, adjust scores, and survive backup
  assert.equal(api.summary('2026-10-15').xp,before.xp+50);
  assert.equal(api.schedule('2026-10-16').some(t=>t.id==='session1'),true);
  assert.equal(api.schedule('2026-10-22').some(t=>t.id==='session1'),true);
- assert.equal(api.schedule('2026-10-17').some(t=>t.id==='weekend1'),false);
+ assert.equal(api.schedule('2026-10-17').some(t=>t.id==='weekend1'),true);
  assert.deepEqual(backup.parse(backup.serialize(data)).weeklySkips,data.weeklySkips);
  api.setToday('2026-10-15');assert.equal(api.dailyMapItems('weekday').some(t=>t.id==='session1'),false);
 });
 test('weekly selection enforces two sessions and pauses removed timers without deleting progress',()=>{
- const api=app(),data=backup.normalizeState(fixture()),day=api.currentDay(),week=api.weekFor(day);api.setState(data);
+ const api=app(),data=backup.normalizeState(fixture()),day=api.weekFor(api.currentDay()),week=api.weekFor(day);api.setState(data);
  data.days[day]={water:0,tasks:{session1:{status:'done',rating:75}},timers:{session1:{elapsedMs:10,startedAt:Date.now()-1000,goal:'Keep'}}};
  assert.equal(api.setWeeklySkips(week,[{day,id:'session1'},{day,id:'session2'},{day,id:'session3'}]),false);
  assert.equal(api.setWeeklySkips(week,[{day,id:'wake'}]),false);
@@ -253,4 +253,50 @@ test('backup rejects invalid weeks, excessive selections, duplicates and unrelat
  for(const weeklySkips of [ {'2026-10-13':[]}, {'2026-10-12':[{day:'2026-10-19',id:'session1'}]}, {'2026-10-12':[{day:'2026-10-12',id:'wake'}]}, {'2026-10-12':Array(3).fill({day:'2026-10-12',id:'session1'})}, {'2026-10-12':Array(2).fill({day:'2026-10-12',id:'session1'})}]){
   assert.throws(()=>backup.normalizeState({...fixture(),weeklySkips}));
  }
+});
+
+test('new schedule merges major and minor while preserving older dates',()=>{
+ const api=app(),tasks=api.schedule('2026-10-16').filter(t=>t.type==='focus');
+ assert.deepEqual(Array.from(tasks,t=>[t.id,t.time,t.max,t.penalty]),[['session1','15:30–18:15',300,75],['session2','18:30–21:30',300,75],['session3','22:00–23:00',200,50]]);
+ assert.equal(api.schedule('2026-10-15').filter(t=>t.type==='focus').length,4);
+ api.setToday('2026-10-16');assert.equal(api.dailyMapItems('weekday').some(t=>!t.name),false);assert.equal(api.dailyMapItems('weekday').some(t=>t.id==='session4'),false);
+ assert.equal(api.schedule('2026-10-17').filter(t=>t.type==='focus').length,5);
+ for(const t of tasks)assert.equal(api.taskXP(t,{status:'done',rating:100,scoringVersion:1,durationMs:api.plannedDuration(t),targetMs:api.plannedDuration(t)}),t.max);
+});
+test('all weekend skips and weekend-mode skips are unavailable',()=>{
+ const api=app(),data=backup.normalizeState(fixture());api.setState(data);
+ data.weeklySkips={'2026-10-12':[{day:'2026-10-17',id:'session1'},{day:'2026-10-18',id:'weekend2'}]};
+ assert.equal(api.canSkipSession('2026-10-17','session1'),false);assert.equal(api.canSkipSession('2026-10-18','weekend2'),false);
+ assert.equal(api.weeklySkipsFor('2026-10-16').length,0);
+ assert.ok(api.schedule('2026-10-17').some(t=>t.id==='session1'));
+ data.dayModes['2026-10-16']='weekend';assert.equal(api.canSkipSession('2026-10-16','session1'),false);
+ data.dayModes['2026-10-17']='normal';assert.equal(api.canSkipSession('2026-10-17','session1'),false);
+});
+test('existing major and minor progress combine once and survive restore',()=>{
+ const data=fixture(),key='2026-10-16';data.days[key]={water:1,tasks:{session1:{status:'done',rating:80,scoringVersion:1,durationMs:7200000,targetMs:7200000},session4:{status:'done',rating:100,scoringVersion:1,durationMs:2700000,targetMs:2700000}},timers:{session1:{elapsedMs:7200000,startedAt:null,goal:'Major'},session4:{elapsedMs:2700000,startedAt:null,goal:'Minor'}}};
+ const restored=backup.normalizeState(data),day=restored.days[key];
+ assert.equal(day.tasks.session1.durationMs,9900000);assert.equal(day.tasks.session1.targetMs,9900000);
+ assert.ok(Math.abs(day.tasks.session1.rating-(80*120+100*45)/165)<1e-9);
+ assert.equal(day.timers.session1.elapsedMs,9900000);assert.equal(day.timers.session1.goal,'Major · Minor');
+ assert.deepEqual(backup.parse(backup.serialize(restored)),restored);
+ assert.equal(data.days[key].tasks.session1.durationMs,7200000);
+});
+
+test('day report totals actual study time once and averages checked-in focus',()=>{
+ const api=app(),data=backup.normalizeState(fixture()),k='2026-10-15';api.setState(data);api.setToday('2026-10-16');
+ data.days[k]={water:3,tasks:{wake:{status:'done',rating:100},session1:{status:'done',rating:80,scoringVersion:1,durationMs:7200000,targetMs:7200000},session2:{status:'done',rating:60,scoringVersion:1,durationMs:5400000,targetMs:10800000}},timers:{session1:{elapsedMs:7200000,startedAt:null,goal:''},session3:{elapsedMs:1800000,startedAt:null,goal:''}}};
+ const report=api.dayStudyReport(k);assert.equal(report.totalMs,14400000);assert.equal(report.avgProductivity,70);assert.equal(report.rituals.length,1);assert.equal(report.water,3);assert.equal(report.sessions.length,4);
+});
+test('day report caps old running timers at midnight IST and keeps unknown time unknown',()=>{
+ const api=app(),data=backup.normalizeState(fixture()),k='2026-10-15';api.setState(data);api.setToday('2026-10-16');
+ data.days[k]={water:0,tasks:{session1:{status:'done',rating:0}},timers:{session3:{elapsedMs:600000,startedAt:Date.parse(k+'T23:50:00+05:30'),goal:''}}};
+ const report=api.dayStudyReport(k);assert.equal(report.totalMs,1200000);assert.equal(report.avgProductivity,0);assert.equal(report.unknownTime,true);assert.equal(report.sessions.find(t=>t.id==='session1').durationMs,null);
+ const empty=api.dayStudyReport('2026-10-14');assert.equal(empty.hasRecord,false);assert.equal(empty.hasTime,false);assert.equal(empty.avgProductivity,null);
+});
+
+test('existing major-only duration uses the new merged target without inventing study time',()=>{
+ const data=fixture();data.days['2026-10-16']={water:0,tasks:{session1:{status:'done',rating:100,scoringVersion:1,durationMs:7200000,targetMs:7200000}}};
+ const normalized=backup.normalizeState(data),entry=normalized.days['2026-10-16'].tasks.session1;
+ assert.equal(entry.durationMs,7200000);assert.equal(entry.targetMs,9900000);
+ assert.deepEqual(backup.parse(backup.serialize(normalized)),normalized);
 });
