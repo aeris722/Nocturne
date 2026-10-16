@@ -9,7 +9,7 @@ function fixture() {
 function app() {
  const context=vm.createContext({Intl,Date,document:{getElementById:()=>({})}});
  const source=fs.readFileSync(require.resolve('../dist/app.js'),'utf8');
- vm.runInContext(source.slice(0,source.indexOf('const glanceButton='))+'\nthis.api={fmt,taskXP,plannedDuration,parseStudyTime,summary,formatDuration,elapsedTimer,pauseSessionTimer,waterXP,schedule,dailyMapItems,statsHtml,examsHtml,dayEditorHtml,ICONS,setState(value){state=value},setToday(value){today=value;selected=value},setEditingDay(value){editingDay=value}};',context);
+ vm.runInContext(source.slice(0,source.indexOf('const glanceButton='))+'\nthis.api={weekFor,setWeeklySkips,currentDay,fmt,taskXP,plannedDuration,parseStudyTime,summary,formatDuration,elapsedTimer,pauseSessionTimer,waterXP,schedule,dailyMapItems,statsHtml,examsHtml,dayEditorHtml,ICONS,setState(value){state=value},setToday(value){today=value;selected=value},setEditingDay(value){editingDay=value}};',context);
  return context.api;
 }
 test('legacy restore drops pattern improvements but preserves exam text and progress',()=>{
@@ -221,4 +221,36 @@ test('backup rejects unsafe timer values without mutating the input',()=>{
  day.timers={session1:{elapsedMs:1e100,startedAt:null,goal:'Study'}};
  assert.throws(()=>backup.normalizeState(state));assert.equal(day.timers.session1.elapsedMs,1e100);
  day.timers.session1.elapsedMs=0;day.timers.session1.startedAt=1e100;assert.throws(()=>backup.normalizeState(state));
+});
+
+test('weekly skips remove only dated sessions, adjust scores, and survive backups',()=>{
+ const api=app(),data=backup.normalizeState(fixture());api.setState(data);api.setToday('2026-10-16');
+ data.days['2026-10-15']={tasks:{},water:0};const before=api.summary('2026-10-15');
+ data.weeklySkips={'2026-10-12':[{day:'2026-10-15',id:'session1'},{day:'2026-10-17',id:'weekend1'}]};
+ assert.equal(api.schedule('2026-10-15').some(t=>t.id==='session1'),false);
+ assert.equal(api.summary('2026-10-15').max,before.max-200);
+ assert.equal(api.summary('2026-10-15').xp,before.xp+50);
+ assert.equal(api.schedule('2026-10-16').some(t=>t.id==='session1'),true);
+ assert.equal(api.schedule('2026-10-22').some(t=>t.id==='session1'),true);
+ assert.equal(api.schedule('2026-10-17').some(t=>t.id==='weekend1'),false);
+ assert.deepEqual(backup.parse(backup.serialize(data)).weeklySkips,data.weeklySkips);
+ api.setToday('2026-10-15');assert.equal(api.dailyMapItems('weekday').some(t=>t.id==='session1'),false);
+});
+test('weekly selection enforces two sessions and pauses removed timers without deleting progress',()=>{
+ const api=app(),data=backup.normalizeState(fixture()),day=api.currentDay(),week=api.weekFor(day);api.setState(data);
+ data.days[day]={water:0,tasks:{session1:{status:'done',rating:75}},timers:{session1:{elapsedMs:10,startedAt:Date.now()-1000,goal:'Keep'}}};
+ assert.equal(api.setWeeklySkips(week,[{day,id:'session1'},{day,id:'session2'},{day,id:'session3'}]),false);
+ assert.equal(api.setWeeklySkips(week,[{day,id:'wake'}]),false);
+ assert.equal(api.setWeeklySkips(week,[{day,id:'session1'},{day,id:'session1'}]),false);
+ assert.equal(api.setWeeklySkips(week,[{day,id:'session1'}]),true);
+ assert.equal(data.days[day].timers.session1.startedAt,null);
+ assert.ok(data.days[day].timers.session1.elapsedMs>=1010);
+ assert.equal(data.days[day].tasks.session1.rating,75);
+ assert.equal(api.setWeeklySkips(week,[]),true);
+ assert.ok(api.schedule(day).some(t=>t.id==='session1'));
+});
+test('backup rejects invalid weeks, excessive selections, duplicates and unrelated tasks',()=>{
+ for(const weeklySkips of [ {'2026-10-13':[]}, {'2026-10-12':[{day:'2026-10-19',id:'session1'}]}, {'2026-10-12':[{day:'2026-10-12',id:'wake'}]}, {'2026-10-12':Array(3).fill({day:'2026-10-12',id:'session1'})}, {'2026-10-12':Array(2).fill({day:'2026-10-12',id:'session1'})}]){
+  assert.throws(()=>backup.normalizeState({...fixture(),weeklySkips}));
+ }
 });
