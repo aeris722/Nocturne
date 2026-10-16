@@ -54,6 +54,19 @@ const NocturneBackup = (() => {
       if (!date(key) || !['normal','weekend'].includes(mode)) fail('This backup contains invalid schedule settings.');
       dayModes[key] = mode;
     }
+    const weeklySkips = {};
+    if (input.weeklySkips !== undefined && !object(input.weeklySkips)) fail('This backup contains invalid weekly skips.');
+    for (const [week, items] of Object.entries(input.weeklySkips || {})) {
+      if (!date(week) || new Date(week+'T12:00:00Z').getUTCDay() !== 1 || !Array.isArray(items) || items.length > 2) fail('This backup contains invalid weekly skips.');
+      const seen = new Set();
+      weeklySkips[week] = items.map(item => {
+        if (!object(item) || !date(item.day) || !['session1','session2','session3','session4','weekend1','weekend2'].includes(item.id)) fail('This backup contains an invalid skipped session.');
+        const delta = (new Date(item.day+'T12:00:00Z')-new Date(week+'T12:00:00Z'))/86400000;
+        const key = item.day+'/'+item.id;
+        if (delta < 0 || delta > 6 || seen.has(key)) fail('This backup contains invalid weekly skips.');
+        seen.add(key);return {day:item.day,id:item.id};
+      });
+    }
     const exams = Array.from({length:2}, (_, i) => {
       const exam = input.exams[i] ?? {};
       if (!object(exam)) fail('This backup contains invalid exam details.');
@@ -63,7 +76,7 @@ const NocturneBackup = (() => {
       if (i === 0) normalized.improvements = text(exam.improvements,3000);
       return normalized;
     });
-    return {days,dayModes,exams};
+    return {days,dayModes,weeklySkips,exams};
   }
   function parse(source) {
     let payload;
